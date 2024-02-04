@@ -1,0 +1,17 @@
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ssafy.relpl.service.TokenMapper">
+
+    <select id="selectAll" resultType="com.ssafy.relpl.dto.request.TokenDTO">
+        SELECT * FROM your_token_table;
+    </select>
+
+    <insert id="insert" parameterType="com.ssafy.relpl.dto.request.TokenDTO">
+        INSERT INTO your_token_table (tokenUid, tokenStr) VALUES (#{tokenUid}, #{tokenStr});
+    </insert>
+
+    <update id="update" parameterType="com.ssafy.relpl.dto.request.TokenDTO">
+        UPDATE your_token_table SET tokenStr = #{tokenStr} WHERE tokenUid = #{tokenUid};
+    </update>
+
+</mapper>
