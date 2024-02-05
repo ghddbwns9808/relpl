@@ -1,14 +1,17 @@
 package com.ssafy.relpl.business;
 
+import com.ssafy.relpl.config.GeomFactoryConfig;
 import com.ssafy.relpl.db.mongo.entity.RecommendProject;
 import com.ssafy.relpl.db.mongo.entity.TmapRoad;
 import com.ssafy.relpl.db.postgre.entity.PointHash;
+import com.ssafy.relpl.db.postgre.entity.RoadHash;
 import com.ssafy.relpl.db.postgre.entity.RoadInfo;
 import com.ssafy.relpl.dto.response.ProjectRecommendResponse;
 import com.ssafy.relpl.service.*;
 import com.ssafy.relpl.util.annotation.Business;
 import com.ssafy.relpl.util.common.Edge;
 import com.ssafy.relpl.util.common.Info;
+import com.ssafy.relpl.util.common.RecommendInfo;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,11 +35,12 @@ public class ProjectRecommendBusiness {
 
     private final RedisTemplate<String, String> redisTemplate;
 
+
     /**
      * 경로 추천 방법
-     * 1. 입력된 시작점, 끝 점으로 부터 가장 가까운 시작점과 끝 점을 RoadHash DB에서 검색
-     * 2. PointHash DB에서 도로에 사용하는 모든 정점의 개수 가져오기 select count(*) from pointhash
-     * 3. RoadInfo DB에서 정점(도로의 시작점 & 끝점)과 길이(최단경로) 가져오고, 가중치(추천경로)도 계산
+     * 1. PointHash DB에서 도로에 사용하는 모든 정점의 개수 가져오기 select count(*) from pointhash
+     * 2. RoadInfo DB에서 정점(도로의 시작점 & 끝점)과 길이(최단경로) 가져오고, 가중치(추천경로)도 계산
+     * 3. 입력된 시작점, 끝 점으로 부터 가장 가까운 시작점과 끝 점을 RoadHash DB에서 검색
      * 4. 해당 점을 가지고 다익스트라 알고리즘 진행 => 결과값은 시작 점으로부터 모든 점 까지의 최단거리
      * 5. 다익스트라로 나온 최단 거리를 바탕으로 역방향 BFS를 진행해서 최단 경로를 계산
      * 5-1. 3번의 결과값으로 나온 도로의 결과는 tamp이 관리하는 도로 번호
@@ -44,7 +48,7 @@ public class ProjectRecommendBusiness {
      * 7. 가져온 도로들의 List를 Point<List>로 변환하고, 앞 뒤에 시작점 끝점을 붙여줌
      * 8. 7번의 결과값을 최단/추천 경로 DB(recommendproject)에 insert
      * 8-1. DB에 저장된 경로은 프로젝트 생성시 해당 프로젝트 id를 넣어는 작업 필요
-     * 9. 8번의 결과값을 return
+     * 9. 7번의 결과값을 return
      * @param start 시작점
      * @param end 끝 점
      * @return ProjectRecommendResponseDto
@@ -56,6 +60,8 @@ public class ProjectRecommendBusiness {
             // 1번
             PointHash realStartHash = pointHashService.getNearPoint(start.getX(), start.getY());
             PointHash realEndHash = pointHashService.getNearPoint(end.getX(), end.getY());
+            int realStartHashId = realStartHash.getPointHashId().intValue();
+            int realEndHashId = realEndHash.getPointHashId().intValue();
 
             if (((start.getX() == end.getX())
                     && (start.getY() == end.getY())
@@ -74,13 +80,25 @@ public class ProjectRecommendBusiness {
             log.info("realStartHash: {}, realEndHash: {}", realStartHash.toString(), realEndHash.toString());
 
             // 4번
-            long[] shortestCost = dijkstraShortestPath(Math.toIntExact(realStartHash.getPointHashId()), Math.toIntExact(realEndHash.getPointHashId()));
-            long[] recommendCost = dijkstraRecommendPath(Math.toIntExact(realStartHash.getPointHashId()), Math.toIntExact(realEndHash.getPointHashId()));
+            long[] shortestCost = dijkstraShortestPath(realStartHashId, realEndHashId);
+            int[] shortestPrevPoint = prevPoint.clone();
+            long[] shortestPrevRoad = prevRoad.clone();
+
+            double[] recommendCost = dijkstraRecommendPath(realStartHashId, realEndHashId);
+            int[] recommendPrevPoint = prevPoint.clone();
+            long[] recommendPrevRoad = prevRoad.clone();
+            log.info("dijkstraShortestPath 완료");
+            // 4번
+//            long[] shortestCost = dijkstraShortestPath(Math.toIntExact(realStartHash.getPointHashId()), Math.toIntExact(realEndHash.getPointHashId()));
+//            long[] recommendCost = dijkstraRecommendPath(Math.toIntExact(realStartHash.getPointHashId()), Math.toIntExact(realEndHash.getPointHashId()));
             log.info("dijkstraShortestPath 완료");
 
             // 5번
-            List<Long> shortestRoadHash = getShortestRoadHashRevBfs(Math.toIntExact(realStartHash.getPointHashId()), Math.toIntExact(realEndHash.getPointHashId()), shortestCost);
-            List<Long> recommendRoadHash = getRecommendRoadHashRevBfs(Math.toIntExact(realStartHash.getPointHashId()), Math.toIntExact(realEndHash.getPointHashId()), recommendCost);
+//            List<Long> shortestRoadHash = getShortestRoadHashRevBfs(realStartHashId, realEndHashId, shortestCost);
+//            List<Long> recommendRoadHash = getRecommendRoadHashRevBfs(realStartHashId, realEndHashId, recommendCost);
+//            log.info("getShortestRoadHashRevBfs 완료");
+            List<Long> shortestRoadHash = getShortestRoadHash(realStartHashId, realEndHashId, shortestPrevRoad, shortestPrevPoint);
+            List<Long> recommendRoadHash = getShortestRoadHash(realStartHashId, realEndHashId, recommendPrevRoad, recommendPrevPoint);
             log.info("getShortestRoadHashRevBfs 완료");
 
             // 6번
@@ -122,6 +140,8 @@ public class ProjectRecommendBusiness {
     int vertexCnt = -1; // 꼭짓점 수
     int pathTotalDistance = 0;
     List<RoadInfo> roadInfos;
+    int[] prevPoint;
+    long[] prevRoad;
 
     /**
      * PointHash table에서 값을 가져옴
@@ -173,12 +193,19 @@ public class ProjectRecommendBusiness {
      * @return start로부터의 모든 점 까지의 최단거리 Long[]
      */
     public long[] dijkstraShortestPath(int start, int end) {
+
         boolean[] visit = new boolean[vertexCnt];
+        prevRoad = new long[vertexCnt];
+        prevPoint = new int[vertexCnt];
+
         long[] cost = new long[vertexCnt];
         for (int i = 0; i < vertexCnt; i++) {
             cost[i] = Integer.MAX_VALUE;
         }
         cost[start] = 0L;
+        prevRoad[start] = -1;
+        prevPoint[start] = start;
+
         PriorityQueue<Info> pq = new PriorityQueue<>((o1, o2) -> Long.compare(o1.distSum, o2.distSum));
         pq.add(new Info(start, 0L));
         while (!pq.isEmpty()) {
@@ -190,6 +217,8 @@ public class ProjectRecommendBusiness {
                 Edge next = edges[info.cur].get(i);
                 if (cost[next.to] < cost[info.cur] + next.dist) continue;
                 cost[next.to] = cost[info.cur] + next.dist;
+                prevRoad[next.to] = next.roadHash;
+                prevPoint[next.to] = info.cur;
                 pq.add(new Info(next.to, cost[next.to]));
             }
         }
@@ -202,17 +231,20 @@ public class ProjectRecommendBusiness {
      * @param start
      * @return start로부터의 모든 점 까지의 최단 가중치 Long[]
      */
-    public long[] dijkstraRecommendPath(int start, int end) {
+    public double[] dijkstraRecommendPath(int start, int end) {
+
         boolean[] visit = new boolean[vertexCnt];
-        long[] cost = new long[vertexCnt];
+        prevRoad = new long[vertexCnt];
+        prevPoint = new int[vertexCnt];
+        double[] cost = new double[vertexCnt];
         for (int i = 0; i < vertexCnt; i++) {
-            cost[i] = Integer.MAX_VALUE;
+            cost[i] = Double.MAX_VALUE;
         }
         cost[start] = 0L;
-        PriorityQueue<Info> pq = new PriorityQueue<>((o1, o2) -> Long.compare(o1.distSum, o2.distSum));
-        pq.add(new Info(start, 0L));
+        PriorityQueue<RecommendInfo> pq = new PriorityQueue<>((o1, o2) -> Double.compare(o1.distSum, o2.distSum));
+        pq.add(new RecommendInfo(start, 0L));
         while (!pq.isEmpty()) {
-            Info info = pq.poll();
+            RecommendInfo info = pq.poll();
             if (visit[info.cur]) continue;
             if (info.cur == end) break;
             visit[info.cur] = true;
@@ -220,7 +252,9 @@ public class ProjectRecommendBusiness {
                 Edge next = edges[info.cur].get(i);
                 if (cost[next.to] < cost[info.cur] + next.weight) continue;
                 cost[next.to] = cost[info.cur] + next.weight;
-                pq.add(new Info(next.to, cost[next.to]));
+                prevRoad[next.to] = next.roadHash;
+                prevPoint[next.to] = info.cur;
+                pq.add(new RecommendInfo(next.to, cost[next.to]));
             }
         }
         return cost;
@@ -262,7 +296,7 @@ public class ProjectRecommendBusiness {
      * @param recommendCost 시작점으로부터 모든 점 까지의 추천경로 Long[]
      * @return 추천경로들의 list가 반환, 이 때 요소는 tmapId > List<TmapId>
      */
-    public List<Long> getRecommendRoadHashRevBfs(int start, int end, long[] recommendCost) {
+    public List<Long> getRecommendRoadHashRevBfs(int start, int end, double[] recommendCost) {
 
         List<Long> pathRoadsHash = new ArrayList<>();
         boolean[] visit = new boolean[vertexCnt];
@@ -301,21 +335,20 @@ public class ProjectRecommendBusiness {
         HashSet<org.springframework.data.geo.Point> pointSet = new HashSet<>();
         List<org.springframework.data.geo.Point> pointList = new ArrayList<>();
 
-        org.springframework.data.geo.Point tmapStartPoint = tmapRoadList.get(0).getGeometry().getCoordinates().get(0);
-        double startDiff = Math.sqrt(Math.pow(Math.abs(end.getX() - tmapStartPoint.getX()), 2) + Math.pow(Math.abs(end.getY() - tmapStartPoint.getY()), 2));
+//        double startDiff = Math.sqrt(Math.pow(Math.abs(end.getX() - tmapStartPoint.getX()), 2) + Math.pow(Math.abs(end.getY() - tmapStartPoint.getY()), 2));
         pathTotalDistance = 0;
-        pathTotalDistance += (int) startDiff; // 두 점 사이의 거리
+//        pathTotalDistance += (int) startDiff; // 두 점 사이의 거리
 
-        pointSet.add(
-                new org.springframework.data.geo.Point(
-                                end.getCoordinate().getX(), end.getCoordinate().getY()
-                )
-        );
-        pointList.add(
-                new org.springframework.data.geo.Point(
-                        end.getCoordinate().getX(), end.getCoordinate().getY()
-                )
-        );
+//        pointSet.add(
+//                new org.springframework.data.geo.Point(
+//                                end.getCoordinate().getX(), end.getCoordinate().getY()
+//                )
+//        );
+//        pointList.add(
+//                new org.springframework.data.geo.Point(
+//                        end.getCoordinate().getX(), end.getCoordinate().getY()
+//                )
+//        );
 
         org.springframework.data.geo.Point tmapcurPoint = new org.springframework.data.geo.Point(-1, -1);
         for (TmapRoad tmapRoad : tmapRoadList) {
@@ -328,17 +361,28 @@ public class ProjectRecommendBusiness {
             }
         }
 
-        if (pointSet.contains(new org.springframework.data.geo.Point(
-                start.getCoordinate().getX(), start.getCoordinate().getY()))) {
-            pointList.add(
-                    new org.springframework.data.geo
-                            .Point(start.getCoordinate().getX(), start.getCoordinate().getY()
-                    )
-            );
-            double endDiff = Math.sqrt(Math.pow(Math.abs(start.getX() - tmapcurPoint.getX()), 2) + Math.pow(Math.abs(start.getY() - tmapcurPoint.getY()), 2));
-            pathTotalDistance += (int)endDiff;
-        }
+//        if (pointSet.contains(new org.springframework.data.geo.Point(
+//                start.getCoordinate().getX(), start.getCoordinate().getY()))) {
+//            pointList.add(
+//                    new org.springframework.data.geo
+//                            .Point(start.getCoordinate().getX(), start.getCoordinate().getY()
+//                    )
+//            );
+//            double endDiff = Math.sqrt(Math.pow(Math.abs(start.getX() - tmapcurPoint.getX()), 2) + Math.pow(Math.abs(start.getY() - tmapcurPoint.getY()), 2));
+//            pathTotalDistance += (int)endDiff;
+//        }
         Collections.reverse(pointList);
         return pointList;
+    }
+
+    public List<Long> getShortestRoadHash(int start, int end, long[] prevRoad, int[] prevPoint) {
+        List<Long> tmapRoadList = new ArrayList<Long>();
+
+        int cur = end;
+        while (cur != start) {
+            tmapRoadList.add(prevRoad[cur]);
+            cur = prevPoint[cur];
+        }
+        return tmapRoadList;
     }
 }
