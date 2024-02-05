@@ -23,7 +23,7 @@ public class MypageController {
     private final MypageService mypageService;
 
 
-    @PostMapping(value = "", consumes = {"multipart/form-data"})
+    @PutMapping(value = "", consumes = {"multipart/form-data"})
     public ResponseEntity<CommonResult> changeProfile(@ModelAttribute MypageChangeRequest request) throws IOException {
         log.info("changeProfile");
         return mypageService.changeProfile(request);
