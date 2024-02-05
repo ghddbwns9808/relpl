@@ -23,6 +23,7 @@ public class MypageController {
     private final MypageService mypageService;
 
 
+    // 24.02.05 10:41AM POSTMapping -> PUTMapping
     @PutMapping(value = "", consumes = {"multipart/form-data"})
     public ResponseEntity<CommonResult> changeProfile(@ModelAttribute MypageChangeRequest request) throws IOException {
         log.info("changeProfile");
