@@ -20,7 +20,7 @@ class RankFragment : BaseFragment<FragmentRankBinding>(
     FragmentRankBinding::bind, R.layout.fragment_rank
 ) {
     private val rankViewModel: RankViewModel by viewModels()
-    private var rankAdapter: RankAdapter = RankAdapter(listOf())
+    private var rankAdapter: RankAdapter = RankAdapter()
     private var rank: Rank = Rank(listOf(),listOf(),listOf())
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
