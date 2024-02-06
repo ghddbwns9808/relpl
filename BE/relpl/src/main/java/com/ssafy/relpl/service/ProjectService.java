@@ -4,13 +4,11 @@ import com.ssafy.relpl.config.GeomFactoryConfig;
 import com.ssafy.relpl.db.postgre.entity.Project;
 import com.ssafy.relpl.db.postgre.repository.ProjectRepository;
 import com.ssafy.relpl.dto.request.ProjectCreateDistanceRequest;
-import com.ssafy.relpl.dto.request.ProjectCreateRouteRequest;
-import com.ssafy.relpl.dto.request.ProjectJoinRequest;
-import com.ssafy.relpl.dto.request.ProjectCreateRouteRequest;
 import com.ssafy.relpl.dto.request.ProjectJoinRequest;
 import com.ssafy.relpl.dto.response.ProjectAllResponse;
 import com.ssafy.relpl.dto.response.ProjectCreateDistanceResponse;
 import com.ssafy.relpl.dto.response.ProjectExistResponse;
+import com.ssafy.relpl.dto.response.ProjectJoinResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -84,7 +82,7 @@ public class ProjectService {
             //프로젝트가 종료되지 않고, 누군가 참여중이지 않는지 확인
             if(project.isProjectIsDone() == false && project.isProjectIsPlogging() == false) {
                 project.setProjectIsPlogging(true);
-                return ResponseEntity.ok(responseService.getSingleResult(true, "프로젝트 참여 성공", 200));
+                return ResponseEntity.ok(responseService.getSingleResult(ProjectJoinResponse.createProjectJoinResponse(project.getProjectId()), "프로젝트 참여 성공", 200));
             }
         }
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(responseService.getFailResult(400, "프로젝트 참여 실패"));
