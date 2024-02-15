@@ -23,7 +23,8 @@
 
 ## 팀원소개
 
-<center>  
+
+<div align="center"> 
 <table>
   <tr>
     <td style="text-align: center;"><img src="https://blog.kakaocdn.net/dn/d2Sec4/btsETi7NKEO/kQCJxQQVCoJq529c02jVIK/img.jpg" width="200" alt="정철주"></td>
@@ -60,7 +61,7 @@
     <td style="text-align: center;">Back-End(Spring)</td>
   </tr>
 </table>
-</center>
+</div>
 <br/><br/><br/><br/><br/><br/>
 
 ## 기능, 동작 화면
