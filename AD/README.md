@@ -104,7 +104,7 @@
 
 ## 개발 환경
 
-- Android Studio : Giraffe 2022.3.1 Patch 2
+- Android Studio : Giraffe 2022.3.1 Patch 2(or 3)
 - Gradle JDK : jbr-17(JetBrains Runtime version 17.0.6)
 - Android Gradle Plugin Version : 8.1.3
 - Gradle Version : 8.1
