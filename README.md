@@ -124,7 +124,7 @@
 
 <br/><br/><br/>
 
-### [피그마 링크](https://www.figma.com/file/TaVoVQpe1XfXl5K0w5JQ8f/%EB%B0%B8%EB%9F%B0%EC%8A%A4%EA%B2%8C%EC%9E%84?type=design&node-id=0%3A1&mode=design&t=pWdO1poXzxwOOz6e-1)
+### [피그마 링크](https://www.figma.com/file/CNQG7GcXmt00S7lykwbBrp/GDD?type=design&node-id=931%3A329&mode=design&t=4O22DC2FBjH0mhY5-1)
 
 <br/><br/><br/>
 
